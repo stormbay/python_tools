@@ -26,35 +26,42 @@ class Elf(object):
 		self.Elf64PgHeader = namedtuple('Elf64PHeader', 'type flags offset vaddr paddr filesz memsz align')
 		self.Elf64SHeader  = namedtuple('Elf64SHeader', 'name type flags addr offset size link info align entsize')
 
+		"""
+		Parse ELF File Header
+		"""
 		header_raw  = self.fd.read(self.ELF64_HEADER_SIZE)
 		self.ElfHdr = self.Elf64Header._make(struct.unpack(self.ELF64_HEADER_FORMAT, header_raw))
 
+		"""
+		Parse ELF Program Header
+		"""
 		for n in range(self.ElfHdr.phnum):
 			self.fd.seek((self.ElfHdr.phoff + n * self.ELF64_PGHEADER_SIZE))
 			pghdr_raw = self.fd.read(self.ELF64_PGHEADER_SIZE)
 			elfphdr = self.Elf64PgHeader._make(struct.unpack(self.ELF64_PGHEADER_FORMAT, pghdr_raw))
 			self.ElfPHdrList.append(elfphdr)
 
+		"""
+		Parse ELF Section Header
+		"""
 		SHT_STRTAB=3
-
 		for n in range(self.ElfHdr.shnum):
 			self.fd.seek((self.ElfHdr.shoff + n * self.ELF64_SHEADER_SIZE))
 			shdr_raw = self.fd.read(self.ELF64_SHEADER_SIZE)
 			elfshdr = self.Elf64SHeader._make(struct.unpack(self.ELF64_SHEADER_FORMAT, shdr_raw))
 			self.ElfSHdrList.append(elfshdr)
 
-		self.str_sec_idx=[]
+		"""
+		Read Section String Table
+		"""
 		self.str_table_list=[]
-		for n in range(self.ElfHdr.shnum):
-			if self.ElfSHdrList[n].type is SHT_STRTAB:
-				str_table_size=self.ElfSHdrList[n].size
-				self.fd.seek(self.ElfSHdrList[n].offset)
-				str_table_raw=self.fd.read(str_table_size)
-				str_talbe = str_table_raw.decode(encoding='ascii')
-				self.str_sec_idx.append(n)
-				self.str_table_list.extend(str_talbe.split('\0'))
-#				break
-		self.str_table_list.sort()
+		str_table_idx=self.ElfHdr.shstrndx
+		str_table_size=self.ElfSHdrList[str_table_idx].size
+		self.fd.seek(self.ElfSHdrList[str_table_idx].offset)
+		str_table_raw=self.fd.read(str_table_size)
+		str_talbe = str_table_raw.decode(encoding='ascii')
+		self.str_table_list.extend(str_talbe.split('\0'))
+#		self.str_table_list.sort()
 
 		self.fd.close()
 
@@ -110,6 +117,14 @@ class Elf(object):
 				  (self.ElfPHdrList[n].filesz, self.ElfPHdrList[n].memsz, pflag[0], pflag[1], pflag[2]))
 		print("")
 
+	def shwo_string_table(self):
+		list_len = len(self.str_table_list)
+		print("<< String Table >>")
+		print("")
+		for n in range(list_len):
+			name_str = self.str_table_list[n]
+			print("%3d. [%s]" % (n, name_str))
+
 	def show_shdr(self):
 		ST_LIST = {			 0 : "NULL",
 							 1 : "PROGBITS",
@@ -142,7 +157,7 @@ class Elf(object):
 #				name_str=self.str_table_list[self.ElfSHdrList[n].name]
 #				print("%3d. [%s]" % (n, name_str))
 #			else:
-#				print("%3d. [%d]" % (n, self.ElfSHdrList[n].name))
+#				print("%3d. [%3d]" % (n, self.ElfSHdrList[n].name))
 
 			type=ST_LIST[self.ElfSHdrList[n].type]
 			flag=[]
@@ -168,22 +183,12 @@ class Elf(object):
 #			print("0x%x" % self.ElfSHdrList[n].entsize)
 		print("")
 
+		self.shwo_string_table()
+
 	def show_all(self):
 		self.show_hdr()
 		self.show_phdr()
-#		self.shwo_string_table()
 		self.show_shdr()
-
-	def shwo_string_table(self):
-		list_len = len(self.str_table_list)
-		sid=self.str_sec_idx
-		print("<< String Table >>")
-		print("[Section ID]:", sid, "   [String Number]: %d" % list_len)
-		print("")
-#		for n in range(list_len):
-#			name_str = self.str_table_list[n]
-#			print("%3d. [%s]" % (n, name_str))
-
 
 
 def usage():
