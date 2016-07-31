@@ -1,7 +1,8 @@
 
-import math
-import struct
+import sys, os.path, getopt
+import math, struct
 from collections import namedtuple
+
 
 class Elf(object):
 
@@ -185,10 +186,73 @@ class Elf(object):
 
 
 
-elf = Elf("vmlinux")
+def usage():
+	genout="Usage: "+sys.argv[0]+" "
+	genlen=len(genout)
+	genoff=" "*genlen
+	print(genout+"-f --elf=<elf-file>"+"\t// show ELF file header")
+	print(genoff+"-p --elf=<elf-file>"+"\t// show ELF program header")
+	print(genoff+"-h --elf=<elf-file>"+"\t// show ELF section header")
+	print(genoff+"-x --elf=<elf-file>"+"\t// show all ELF headers")
+	print(genoff+"-t --elf=<elf-file> --sid=<section-index> --of=<output-file>"+"\t// extract a section to output file")
+
+
+
+elffile=""
+outfile=""
+
+FLAG_SHOW_FH=1
+FLAG_SHOW_PH=2
+FLAG_SHOW_SH=4
+FLAG_SHOW_ALL=(FLAG_SHOW_FH | FLAG_SHOW_PH | FLAG_SHOW_SH)
+FLAG_TRUNC_FLAG=8
+
+ACTION_FLAGS=0
+
+
+if len(sys.argv)<2:
+	usage()
+	sys.exit(1)
+
+opts, args=getopt.getopt(sys.argv[1:], "fphxt", ["elf=", "sid=", "of="])
+for opt, value in opts:
+	if opt=="-f":
+		ACTION_FLAGS |= FLAG_SHOW_FH
+	elif opt=="-p":
+		ACTION_FLAGS |= FLAG_SHOW_PH
+	elif opt=="-h":
+		ACTION_FLAGS |= FLAG_SHOW_SH
+	elif opt=="-x":
+		ACTION_FLAGS |= FLAG_SHOW_ALL
+	elif opt=="--elf":
+		elffile=value
+	elif opt=="-t":
+		ACTION_FLAGS |= FLAG_TRUNC_FLAG
+	elif opt=="--sid":
+		pass
+	elif opt=="--of":
+		outfile=value
+	else:
+		usage()
+		sys.exit(1)
+
+if elffile=="":
+	usage()
+	sys.exit(1)
+if not os.path.exists(elffile):
+	print("Error: ELF file \""+elffile+"\" doesn't exist.")
+	sys.exit(1)
+
+
+elf = Elf(elffile)
 elf.parse()
-#elf.show_hdr()
-#elf.show_phdr()
-#elf.shwo_string_table()
-#elf.show_shdr()
-elf.show_all()
+
+if (ACTION_FLAGS & FLAG_SHOW_ALL) != 0:
+	elf.show_all()
+else:
+	if (ACTION_FLAGS & FLAG_SHOW_FH) != 0:
+		elf.show_hdr()
+	if (ACTION_FLAGS & FLAG_SHOW_PH) != 0:
+		elf.show_phdr()
+	if (ACTION_FLAGS & FLAG_SHOW_SH) != 0:
+		elf.show_shdr()

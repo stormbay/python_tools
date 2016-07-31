@@ -25,7 +25,6 @@ opts, args=getopt.getopt(sys.argv[1:], "o:", ["f1=", "f2="])
 for opt, value in opts:
 	if opt=="-o":
 		outfile_name=value
-		print("outfile= \""+file1_name+"\"")
 	elif opt=="--f1":
 		file1_name=value
 		argflag|=ARG_F1_SET_FLAG
