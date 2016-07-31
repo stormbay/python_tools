@@ -1,32 +1,52 @@
-import sys
+import sys, os.path
 import getopt, struct
 
 
-def usage():
-	print("Usage: "+sys.argv[0]+" -f1 <file1> -f2 <file2> -o <diff-output-file>")
+file1_name=""
+file2_name=""
+outfile_name="bin.diff"
 
-"""
+
+ARG_F1_SET_FLAG=1
+ARG_F2_SET_FLAG=2
+ARG_REQUIRED=(ARG_F1_SET_FLAG or ARG_F2_SET_FLAG)
+
+argflag=0
+
+
+def usage():
+	print("Usage: "+sys.argv[0]+" --f1=<file1> --f2=<file2> -o <output-file>")
+
 if len(sys.argv) < 2:
 	usage()
 	sys.exit(1)
 
-opts,args=getopt.getopt(sys.argv[1], "o:", ["f1=", "f2="])
-
-for opt,value in opts:
+opts, args=getopt.getopt(sys.argv[1:], "o:", ["f1=", "f2="])
+for opt, value in opts:
 	if opt=="-o":
-		pass
+		outfile_name=value
+		print("outfile= \""+file1_name+"\"")
 	elif opt=="--f1":
-		pass
+		file1_name=value
+		argflag|=ARG_F1_SET_FLAG
 	elif opt=="--f2":
-		pass
+		file2_name=value
+		argflag|=ARG_F2_SET_FLAG
 	else:
 		usage()
 		sys.exit(1)
-"""
 
-file1_name="vmlinux"
-file2_name="vmlinux2"
-outfile_name="bin.diff"
+if not (argflag & ARG_REQUIRED)==ARG_REQUIRED:
+	usage()
+	sys.exit(1)
+
+if not os.path.exists(file1_name):
+	print("Error: Input file \""+file1_name+"\" doesn't exist.")
+	sys.exit(1)
+if not os.path.exists(file2_name):
+	print("Error: Input file \""+file2_name+"\" doesn't exist.")
+	sys.exit(1)
+
 
 block_size=4096
 section_size=128
@@ -78,7 +98,7 @@ def show_section_diff(sec1, sec2, secoft):
 	of.write(out1)
 	of.write(out2)
 
-while True:
+while block_num < True:
 	data1=fn1.read(block_size)
 	data2=fn2.read(block_size)
 

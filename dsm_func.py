@@ -1,33 +1,61 @@
-import sys, getopt
+import sys, os.path
+import getopt
 import subprocess
 
+"""
 major, minor=sys.version_info[:2]
 if (major != 3) or (minor < 4):
     print("This script requires python3.4 or newer to run!")
     print("You seem to be running: " + sys.version)
     sys.exit(1)
+"""
+
+def usage():
+    print("Usage: "+sys.argv[0]+" --elf=<elf-file> -f <function> [--symbol=<symbol-file>] [--nm=<nm>] [--objdump=<objdump>]")
 
 
-need_new_symbol_file=False
+need_new_symbol_file=True
 
 nm="aarch64-linux-gnu-nm"
 objdump="aarch64-linux-gnu-objdump"
 
-elffile="vmlinux"
-symfile="System.map"
+elffile=""
+symfile=""
 
 
-opts, args=getopt.getopt(sys.argv[1:], "f:", ["elf=", "symbol="])
+if len(sys.argv)<2:
+    usage()
+    sys.exit(1)
+
+opts, args=getopt.getopt(sys.argv[1:], "f:", ["nm=", "objdump=", "elf=", "symbol="])
 for opt, value in opts:
-    if opt=="--elf":
+    if opt=="--nm":
+        nm=value
+    elif opt=="--objdump":
+        objdump=value
+    elif opt=="--elf":
         elffile=value
     elif opt=="--symbol":
         symfile=value
-        need_new_symbol_file=True
     elif opt=="-f":
         target_symbol=value
     else:
-        sys.exit(1) 
+        usage()
+        sys.exit(1)
+
+if elffile=="":
+    usage()
+    sys.exit(1)
+if not os.path.exists(elffile):
+    print("Error: ELF file \""+elffile+"\" doesn't exist.")
+    sys.exit(1)
+if symfile=="":
+    symfile=elffile+".map"
+else:
+    if not os.path.exists(symfile):
+        print("Error: Symbol file \""+symfile+"\" doesn't exist.")
+        sys.exit(1)
+    need_new_symbol_file=False
 
 
 get_sym_cmd=nm+" -n "+elffile+" | grep -v '\( [aNUw] \)\|\(__crc_\)\|\( \$[adt]\)' > "+symfile

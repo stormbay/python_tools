@@ -153,7 +153,7 @@ class Elf(object):
 				flag.append("EXECINSTR")
 			if (self.ElfSHdrList[n].flags & SF_MASKPROC):
 				flag.append("MASKPROC")
-			print("%3d. [%d]  [Type]: %-8s  [Flags]: " % (n, self.ElfSHdrList[n].name, type), flag)
+			print("%3d. [%3d]  [Type]: %-8s  [Flags]: " % (n, self.ElfSHdrList[n].name, type), flag)
 
 			if self.ElfSHdrList[n].align is 0:
 				align=0
@@ -183,15 +183,12 @@ class Elf(object):
 #			name_str = self.str_table_list[n]
 #			print("%3d. [%s]" % (n, name_str))
 
-	def show_test(self):
-		pass
 
 
-elf = Elf("/home/suxin/python/vmlinux")
+elf = Elf("vmlinux")
 elf.parse()
 #elf.show_hdr()
 #elf.show_phdr()
 #elf.shwo_string_table()
 #elf.show_shdr()
 elf.show_all()
-#elf.show_test()
