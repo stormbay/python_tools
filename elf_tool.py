@@ -59,16 +59,17 @@ class Elf(object):
 		"""
 		self.str_table_list=[]
 		str_table_idx=self.ElfHdr.shstrndx
-		str_table_size=self.ElfSHdrList[str_table_idx].size
+		self.str_table_size=self.ElfSHdrList[str_table_idx].size
 		self.fd.seek(self.ElfSHdrList[str_table_idx].offset)
-		str_table_raw=self.fd.read(str_table_size)
-		str_talbe = str_table_raw.decode(encoding='ascii')
-		self.str_table_list.extend(str_talbe.split('\0'))
-#		self.str_table_list.sort()
+		str_table_raw=self.fd.read(self.str_table_size)
+		self.str_table = str_table_raw.decode(encoding='ascii')
+		self.str_table_list.extend(self.str_table.split('\0'))
+		self.str_table_list.sort()
 
 		self.fd.close()
 
 	def show_hdr(self):
+		print("")
 		print("[Ident]     %s" % self.ElfHdr.ident)
 		print("[Type]      0x%x" % self.ElfHdr.type)
 		print("[Machine]   %d" % self.ElfHdr.machine)
@@ -83,7 +84,6 @@ class Elf(object):
 		print("[ShEntSize] %d" % self.ElfHdr.shentsize)
 		print("[ShNum]     %d" % self.ElfHdr.shnum)
 		print("[ShStrndx]  %d" % self.ElfHdr.shstrndx)
-		print("")
 
 	def show_phdr(self):
 		PF_R=4
@@ -103,7 +103,7 @@ class Elf(object):
 				  0x7fffffff : "HIPROC",
 				  0x6474e550 : "FRAME",
 				  0x6474e551 : "STACK",}
-		print("<< Program Header >>")
+		print("\n<< Program Header >>")
 		for n in range(self.ElfHdr.phnum):
 #			print("")
 			ptype=PT_LIST[self.ElfPHdrList[n].type]
@@ -127,6 +127,16 @@ class Elf(object):
 		for n in range(list_len):
 			name_str = self.str_table_list[n]
 			print("%3d. [%s]" % (n, name_str))
+
+	def search_shname(self, shname):
+		namestr=""
+		if shname >= self.str_table_size:
+			return namestr
+		for n in range(shname, self.str_table_size):
+			namestr+=self.str_table[n]
+			if self.str_table[n]=="\0":
+				break;
+		return namestr
 
 	def show_shdr(self):
 		ST_LIST = {			 0 : "NULL",
@@ -152,16 +162,10 @@ class Elf(object):
 		SF_EXECINSTR=4
 		SF_MASKPROC=0xf0000000
 
-		print("<< Sections >>")
+		print("\n<< Sections >>")
 		list_len=len(self.str_table_list)
 		for n in range(self.ElfHdr.shnum):
-#			print("")
-#			if self.ElfSHdrList[n].name < list_len:
-#				name_str=self.str_table_list[self.ElfSHdrList[n].name]
-#				print("%3d. [%s]" % (n, name_str))
-#			else:
-#				print("%3d. [%3d]" % (n, self.ElfSHdrList[n].name))
-
+			name=self.search_shname(self.ElfSHdrList[n].name)
 			type=ST_LIST[self.ElfSHdrList[n].type]
 			flag=[]
 			if (self.ElfSHdrList[n].flags & SF_WRITE):
@@ -172,7 +176,7 @@ class Elf(object):
 				flag.append("EXECINSTR")
 			if (self.ElfSHdrList[n].flags & SF_MASKPROC):
 				flag.append("MASKPROC")
-			print("%3d. [%3d]  [Type]: %-8s  [Flags]: " % (n, self.ElfSHdrList[n].name, type), flag)
+			print("\n%3d. [%s]  [Type]: %-8s  [Flags]: " % (n, name, type), flag)
 
 			if self.ElfSHdrList[n].align is 0:
 				align=0
@@ -186,12 +190,11 @@ class Elf(object):
 #			print("0x%x" % self.ElfSHdrList[n].entsize)
 		print("")
 
-		self.shwo_string_table()
-
 	def show_all(self):
 		self.show_hdr()
 		self.show_phdr()
 		self.show_shdr()
+		self.shwo_string_table()
 
 	def compare_section(self, dumpfile, secid, outputfile):
 		if secid >= self.ElfHdr.shnum:
@@ -367,7 +370,7 @@ if not os.path.exists(elffile):
 elf = Elf(elffile)
 elf.parse()
 
-if (ACTION_FLAGS & FLAG_SHOW_ALL) != 0:
+if (ACTION_FLAGS & FLAG_SHOW_ALL) == FLAG_SHOW_ALL:
 	elf.show_all()
 else:
 	if (ACTION_FLAGS & FLAG_SHOW_FH) != 0:
