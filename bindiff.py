@@ -97,7 +97,7 @@ def show_section_diff(sec1, sec2, secoft):
 	of.write(out1)
 	of.write(out2)
 
-while block_num < True:
+while True:
 	data1=fn1.read(block_size)
 	data2=fn2.read(block_size)
 
