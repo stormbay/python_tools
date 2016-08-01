@@ -4,6 +4,9 @@ import math, struct
 from collections import namedtuple
 
 
+# FIXME: TO Support 32-bit ELF
+
+
 class Elf(object):
 
 	def __init__(self, file):
@@ -190,6 +193,115 @@ class Elf(object):
 		self.show_phdr()
 		self.show_shdr()
 
+	def compare_section(self, dumpfile, secid, outputfile):
+		if secid >= self.ElfHdr.shnum:
+			return
+
+		block_size=4096
+		block_num=0
+		diff_count=0
+
+		sec_offset=self.ElfSHdrList[secid].offset
+		sec_size=self.ElfSHdrList[secid].size
+		sec_address=self.ElfSHdrList[secid].addr
+
+		if self.ElfSHdrList[secid].align is 0:
+			align=0
+		else:
+			align=math.log2(self.ElfSHdrList[secid].align)
+		outstring="\"{:s}\"  Program Section ID: <{:d}>\n\n".format(self.file, secid)
+		outstring+="Addr: 0x{:016X}  Align: 2**{:d}  Offset: 0x{:08X}  Size: 0x{:08X}\n".format(sec_address, int(align), sec_offset, sec_size)
+
+		ef=open(self.file, 'rb')
+		df=open(dumpfile, 'rb')
+		of=open(outputfile, 'w')
+
+		of.write(outstring)
+
+		ef.seek(sec_offset)
+		bin_offset=sec_address & ~0xFFFFFFC000000000
+		df.seek(bin_offset)
+
+		size_left=sec_size
+
+		while True:
+
+			if size_left==0:
+				break;
+
+			rdsize=block_size
+			if size_left < block_size:
+				rdsize=size_left
+
+			data1=ef.read(rdsize)
+			data2=df.read(rdsize)
+
+			if (min(len(data1), len(data2)) < rdsize):
+				break;
+
+			size_left -= rdsize
+
+			if data1==data2:
+				block_num+=1
+				continue
+
+			secoff=0
+			while secoff < rdsize:
+				line_size=32
+				slice_size=128
+				if (rdsize - secoff) < 128:
+					slice_size=rdsize - secoff
+
+				sec1=data1[secoff:(secoff+slice_size)]
+				sec2=data2[secoff:(secoff+slice_size)]
+
+				if not sec1==sec2:
+					len1=len(sec1)
+					len2=len(sec2)
+					minlen=min(len1, len2)
+
+					n=0
+					out1=''
+					out2=''
+					while n < minlen:
+						val1=struct.unpack_from('<I', sec1, n)[0]
+						val2=struct.unpack_from('<I', sec2, n)[0]
+
+						offset=sec_size - size_left - rdsize + secoff + n
+
+						if (n % slice_size)==0:
+							of.write(out1)
+							of.write(out2)
+							out1="\n\n<<"+self.file+">>"
+							out2="\n<<"+dumpfile+">>"
+
+						if (n % line_size)==0:
+							out1+="\n {0:>016X}:".format((sec_address + offset))
+							out2+="\n {0:>016X}:".format((sec_address + offset))
+
+						if not val1==val2:
+							diff_count+=1
+							out1+=" >{0:>08X}".format(val1)
+							out2+=" >{0:>08X}".format(val2)
+						else:
+							out1+="  {0:>08X}".format(val1)
+							out2+="  {0:>08X}".format(val2)
+
+						n+=4
+
+					of.write(out1)
+					of.write(out2)
+
+				secoff+=slice_size
+
+			block_num+=1
+
+		if diff_count==0:
+			of.write("No difference.\n")
+
+		ef.close()
+		df.close()
+		of.close()
 
 def usage():
 	genout="Usage: "+sys.argv[0]+" "
@@ -199,27 +311,29 @@ def usage():
 	print(genoff+"-p --elf=<elf-file>"+"\t// show ELF program header")
 	print(genoff+"-h --elf=<elf-file>"+"\t// show ELF section header")
 	print(genoff+"-x --elf=<elf-file>"+"\t// show all ELF headers")
-	print(genoff+"-t --elf=<elf-file> --sid=<section-index> --of=<output-file>"+"\t// extract a section to output file")
-
+	print(genoff+"--elf=<elf-file> --bin=<dump-bin-file> --sid=<section-index> [--of=<output-file>]"+"\t// compare a section with memory dump")
 
 
 elffile=""
+binfile=""
 outfile=""
 
 FLAG_SHOW_FH=1
 FLAG_SHOW_PH=2
 FLAG_SHOW_SH=4
 FLAG_SHOW_ALL=(FLAG_SHOW_FH | FLAG_SHOW_PH | FLAG_SHOW_SH)
-FLAG_TRUNC_FLAG=8
+FLAG_COMPARE_FLAG=8
 
 ACTION_FLAGS=0
+
+compare_section_id=0
 
 
 if len(sys.argv)<2:
 	usage()
 	sys.exit(1)
 
-opts, args=getopt.getopt(sys.argv[1:], "fphxt", ["elf=", "sid=", "of="])
+opts, args=getopt.getopt(sys.argv[1:], "fphx", ["elf=", "bin=", "sid=", "of="])
 for opt, value in opts:
 	if opt=="-f":
 		ACTION_FLAGS |= FLAG_SHOW_FH
@@ -231,10 +345,11 @@ for opt, value in opts:
 		ACTION_FLAGS |= FLAG_SHOW_ALL
 	elif opt=="--elf":
 		elffile=value
-	elif opt=="-t":
-		ACTION_FLAGS |= FLAG_TRUNC_FLAG
+	elif opt=="--bin":
+		binfile=value
+		ACTION_FLAGS |= FLAG_COMPARE_FLAG
 	elif opt=="--sid":
-		pass
+		compare_section_id=int(value)
 	elif opt=="--of":
 		outfile=value
 	else:
@@ -261,3 +376,12 @@ else:
 		elf.show_phdr()
 	if (ACTION_FLAGS & FLAG_SHOW_SH) != 0:
 		elf.show_shdr()
+
+if (ACTION_FLAGS & FLAG_COMPARE_FLAG) != 0:
+	if not os.path.exists(binfile):
+		print("Error: Memory dump file \""+binfile+"\" doesn't exist.")
+		sys.exit(1)
+	if outfile=="":
+		outfile="diff-"+binfile+"-section-"+str(compare_section_id)
+
+	elf.compare_section(binfile, compare_section_id, outfile)
