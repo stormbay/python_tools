@@ -105,9 +105,8 @@ class Elf(object):
 				  0x6474e551 : "STACK",}
 		print("\n<< Program Header >>")
 		for n in range(self.ElfHdr.phnum):
-#			print("")
 			ptype=PT_LIST[self.ElfPHdrList[n].type]
-			print("[%8s]    off: 0x%016x vaddr: 0x%016x paddr: 0x%016x align: 2**%-2d" %
+			print("\n[%8s]    off: 0x%016X vaddr: 0x%016X paddr: 0x%016X align: 2**%-2d" %
 				  (ptype, self.ElfPHdrList[n].offset, self.ElfPHdrList[n].vaddr, self.ElfPHdrList[n].paddr, math.log2(self.ElfPHdrList[n].align)))
 			pflag = ['-', '-', '-']
 			if (self.ElfPHdrList[n].flags & PF_R):
@@ -116,7 +115,7 @@ class Elf(object):
 				pflag[1]='W'
 			if (self.ElfPHdrList[n].flags & PF_X):
 				pflag[2]='X'
-			print("           filesz: 0x%016x memsz: 0x%016x flags: %1s%1s%1s" %
+			print("           filesz: 0x%016X memsz: 0x%016X flags: %1s%1s%1s" %
 				  (self.ElfPHdrList[n].filesz, self.ElfPHdrList[n].memsz, pflag[0], pflag[1], pflag[2]))
 		print("")
 
@@ -212,7 +211,7 @@ class Elf(object):
 			align=0
 		else:
 			align=math.log2(self.ElfSHdrList[secid].align)
-		outstring="\"{:s}\"  Program Section ID: <{:d}>\n\n".format(self.file, secid)
+		outstring="\"{:s}\"  Section ID: <{:d}>\n\n".format(self.file, secid)
 		outstring+="Addr: 0x{:016X}  Align: 2**{:d}  Offset: 0x{:08X}  Size: 0x{:08X}\n".format(sec_address, int(align), sec_offset, sec_size)
 
 		ef=open(self.file, 'rb')
