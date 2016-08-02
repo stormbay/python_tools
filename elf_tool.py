@@ -133,9 +133,9 @@ class Elf(object):
 		if shname >= self.str_table_size:
 			return namestr
 		for n in range(shname, self.str_table_size):
-			namestr+=self.str_table[n]
 			if self.str_table[n]=="\0":
 				break;
+			namestr+=self.str_table[n]
 		return namestr
 
 	def show_shdr(self):
@@ -176,14 +176,14 @@ class Elf(object):
 				flag.append("EXECINSTR")
 			if (self.ElfSHdrList[n].flags & SF_MASKPROC):
 				flag.append("MASKPROC")
-			print("\n%3d. [%s]  [Type]: %-8s  [Flags]: " % (n, name, type), flag)
+			print("\n%3d. %-24s  [Type]: %-8s  [Flags]: " % (n, name, type), flag)
 
 			if self.ElfSHdrList[n].align is 0:
 				align=0
 			else:
 				align=math.log2(self.ElfSHdrList[n].align)
-			print("     " "addr: 0x%016x" "  " "align: 2**%-2d" "  " "offset: 0x%08x" "  " "size: 0x%08x" %
-				  (self.ElfSHdrList[n].addr, align, self.ElfSHdrList[n].offset, self.ElfSHdrList[n].size))
+			print("     " "addr: 0x%016X" "  " "size: 0x%08X" "  " "offset: 0x%08X" "  " "align: 2**%-2d" %
+				  (self.ElfSHdrList[n].addr, self.ElfSHdrList[n].size, self.ElfSHdrList[n].offset, align))
 
 #			print("0x%x" % self.ElfSHdrList[n].link)
 #			print("0x%x" % self.ElfSHdrList[n].info)
