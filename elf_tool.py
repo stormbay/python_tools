@@ -4,9 +4,6 @@ import math, struct
 from collections import namedtuple
 
 
-# FIXME: TO Support 32-bit ELF
-
-
 class Elf(object):
 
 	def __init__(self, file):
@@ -18,30 +15,19 @@ class Elf(object):
 	def parse(self):
 		self.fd = open( self.file, "rb")
 
-		self.ELF64_HEADER_FORMAT   = '<16sHHIQQQIHHHHHH'
-		self.ELF64_HEADER_SIZE     = struct.calcsize(self.ELF64_HEADER_FORMAT)
-		self.ELF64_PGHEADER_FORMAT = '<IIQQQQQQ'
-		self.ELF64_PGHEADER_SIZE   = struct.calcsize(self.ELF64_PGHEADER_FORMAT)
-		self.ELF64_SHEADER_FORMAT  = '<IIQQQQIIQQ'
-		self.ELF64_SHEADER_SIZE    = struct.calcsize(self.ELF64_SHEADER_FORMAT)
-
-		self.Elf64Header   = namedtuple('ElfHeader',    'ident type machine version entry phoff shoff flags ehsize phentsize phnum shentsize shnum shstrndx')
-		self.Elf64PgHeader = namedtuple('Elf64PHeader', 'type flags offset vaddr paddr filesz memsz align')
-		self.Elf64SHeader  = namedtuple('Elf64SHeader', 'name type flags addr offset size link info align entsize')
-
 		"""
 		Parse ELF File Header
 		"""
-		header_raw  = self.fd.read(self.ELF64_HEADER_SIZE)
-		self.ElfHdr = self.Elf64Header._make(struct.unpack(self.ELF64_HEADER_FORMAT, header_raw))
+		header_raw  = self.fd.read(self.ELF_HEADER_SIZE)
+		self.ElfHdr = self.ElfHeader._make(struct.unpack(self.ELF_HEADER_FORMAT, header_raw))
 
 		"""
 		Parse ELF Program Header
 		"""
 		for n in range(self.ElfHdr.phnum):
-			self.fd.seek((self.ElfHdr.phoff + n * self.ELF64_PGHEADER_SIZE))
-			pghdr_raw = self.fd.read(self.ELF64_PGHEADER_SIZE)
-			elfphdr = self.Elf64PgHeader._make(struct.unpack(self.ELF64_PGHEADER_FORMAT, pghdr_raw))
+			self.fd.seek((self.ElfHdr.phoff + n * self.ELF_PGHEADER_SIZE))
+			pghdr_raw = self.fd.read(self.ELF_PGHEADER_SIZE)
+			elfphdr = self.ElfPgHeader._make(struct.unpack(self.ELF_PGHEADER_FORMAT, pghdr_raw))
 			self.ElfPHdrList.append(elfphdr)
 
 		"""
@@ -49,9 +35,9 @@ class Elf(object):
 		"""
 		SHT_STRTAB=3
 		for n in range(self.ElfHdr.shnum):
-			self.fd.seek((self.ElfHdr.shoff + n * self.ELF64_SHEADER_SIZE))
-			shdr_raw = self.fd.read(self.ELF64_SHEADER_SIZE)
-			elfshdr = self.Elf64SHeader._make(struct.unpack(self.ELF64_SHEADER_FORMAT, shdr_raw))
+			self.fd.seek((self.ElfHdr.shoff + n * self.ELF_SHEADER_SIZE))
+			shdr_raw = self.fd.read(self.ELF_SHEADER_SIZE)
+			elfshdr = self.ElfSHeader._make(struct.unpack(self.ELF_SHEADER_FORMAT, shdr_raw))
 			self.ElfSHdrList.append(elfshdr)
 
 		"""
@@ -165,17 +151,22 @@ class Elf(object):
 		list_len=len(self.str_table_list)
 		for n in range(self.ElfHdr.shnum):
 			name=self.search_shname(self.ElfSHdrList[n].name)
-			type=ST_LIST[self.ElfSHdrList[n].type]
 			flag=[]
-			if (self.ElfSHdrList[n].flags & SF_WRITE):
-				flag.append("WRITE")
-			if (self.ElfSHdrList[n].flags & SF_ALLOC):
-				flag.append("ALLOC")
-			if (self.ElfSHdrList[n].flags & SF_EXECINSTR):
-				flag.append("EXECINSTR")
-			if (self.ElfSHdrList[n].flags & SF_MASKPROC):
-				flag.append("MASKPROC")
-			print("\n%3d. %-24s  [Type]: %-8s  [Flags]: " % (n, name, type), flag)
+			try:
+				type=ST_LIST[self.ElfSHdrList[n].type]
+			except:
+				flag.append("--UNKNOWN--")
+			else:
+				if (self.ElfSHdrList[n].flags & SF_WRITE):
+					flag.append("WRITE")
+				if (self.ElfSHdrList[n].flags & SF_ALLOC):
+					flag.append("ALLOC")
+				if (self.ElfSHdrList[n].flags & SF_EXECINSTR):
+					flag.append("EXECINSTR")
+				if (self.ElfSHdrList[n].flags & SF_MASKPROC):
+					flag.append("MASKPROC")
+			finally:
+				print("\n%3d. %-24s  [Type]: %-8s  [Flags]: " % (n, name, type), flag)
 
 			if self.ElfSHdrList[n].align is 0:
 				align=0
@@ -221,7 +212,7 @@ class Elf(object):
 		of.write(outstring)
 
 		ef.seek(sec_offset)
-		bin_offset=sec_address & ~0xFFFFFFC000000000
+		bin_offset=sec_address - self.PAGE_OFFSET
 		df.seek(bin_offset)
 
 		size_left=sec_size
@@ -305,16 +296,54 @@ class Elf(object):
 		df.close()
 		of.close()
 
+
+class Elf32(Elf):
+	def __init__(self, file):
+		super(Elf32, self).__init__(file)
+
+		self.PAGE_OFFSET = 0xFFFFFFC000000000
+
+		self.ELF_HEADER_FORMAT   = '<16sHHIIIIIHHHHHH'
+		self.ELF_HEADER_SIZE     = struct.calcsize(self.ELF_HEADER_FORMAT)
+		self.ELF_PGHEADER_FORMAT = '<IIIIIIII'
+		self.ELF_PGHEADER_SIZE   = struct.calcsize(self.ELF_PGHEADER_FORMAT)
+		self.ELF_SHEADER_FORMAT  = '<IIIIIIIIII'
+		self.ELF_SHEADER_SIZE    = struct.calcsize(self.ELF_SHEADER_FORMAT)
+
+		self.ElfHeader   = namedtuple('Elf32Header',  'ident type machine version entry phoff shoff flags ehsize phentsize phnum shentsize shnum shstrndx')
+		self.ElfPgHeader = namedtuple('Elf32PHeader', 'type offset vaddr paddr filesz memsz flags align')
+		self.ElfSHeader  = namedtuple('Elf32SHeader', 'name type flags addr offset size link info align entsize')
+
+class Elf64(Elf):
+	def __init__(self, file):
+		super(Elf64, self).__init__(file)
+
+		self.PAGE_OFFSET = 0xC0000000
+
+		self.ELF_HEADER_FORMAT   = '<16sHHIQQQIHHHHHH'
+		self.ELF_HEADER_SIZE     = struct.calcsize(self.ELF_HEADER_FORMAT)
+		self.ELF_PGHEADER_FORMAT = '<IIQQQQQQ'
+		self.ELF_PGHEADER_SIZE   = struct.calcsize(self.ELF_PGHEADER_FORMAT)
+		self.ELF_SHEADER_FORMAT  = '<IIQQQQIIQQ'
+		self.ELF_SHEADER_SIZE    = struct.calcsize(self.ELF_SHEADER_FORMAT)
+
+		self.ElfHeader   = namedtuple('Elf64Header',  'ident type machine version entry phoff shoff flags ehsize phentsize phnum shentsize shnum shstrndx')
+		self.ElfPgHeader = namedtuple('Elf64PHeader', 'type flags offset vaddr paddr filesz memsz align')
+		self.ElfSHeader  = namedtuple('Elf64SHeader', 'name type flags addr offset size link info align entsize')
+
+
 def usage():
 	genout="Usage: "+sys.argv[0]+" "
 	genlen=len(genout)
 	genoff=" "*genlen
-	print(genout+"-f --elf=<elf-file>"+"\t// show ELF file header")
-	print(genoff+"-p --elf=<elf-file>"+"\t// show ELF program header")
-	print(genoff+"-h --elf=<elf-file>"+"\t// show ELF section header")
-	print(genoff+"-x --elf=<elf-file>"+"\t// show all ELF headers")
-	print(genoff+"--elf=<elf-file> --bin=<dump-bin-file> --sid=<section-index> [--of=<output-file>]"+"\t// compare a section with memory dump")
+	print(genout+"-f [--32bit] --elf=<elf-file>"+"\t// show ELF file header")
+	print(genoff+"-p [--32bit] --elf=<elf-file>"+"\t// show ELF program header")
+	print(genoff+"-h [--32bit] --elf=<elf-file>"+"\t// show ELF section header")
+	print(genoff+"-x [--32bit] --elf=<elf-file>"+"\t// show all ELF headers")
+	print(genoff+"[--32bit] --elf=<elf-file> --bin=<dump-bin-file> --sid=<section-index> [--of=<output-file>]"+"\t// compare a section with memory dump")
 
+
+mode_32bit=False
 
 elffile=""
 binfile=""
@@ -335,7 +364,7 @@ if len(sys.argv)<2:
 	usage()
 	sys.exit(1)
 
-opts, args=getopt.getopt(sys.argv[1:], "fphx", ["elf=", "bin=", "sid=", "of="])
+opts, args=getopt.getopt(sys.argv[1:], "fphx", ["32bit", "elf=", "bin=", "sid=", "of="])
 for opt, value in opts:
 	if opt=="-f":
 		ACTION_FLAGS |= FLAG_SHOW_FH
@@ -345,6 +374,8 @@ for opt, value in opts:
 		ACTION_FLAGS |= FLAG_SHOW_SH
 	elif opt=="-x":
 		ACTION_FLAGS |= FLAG_SHOW_ALL
+	elif opt=="--32bit":
+		mode_32bit=True
 	elif opt=="--elf":
 		elffile=value
 	elif opt=="--bin":
@@ -365,8 +396,11 @@ if not os.path.exists(elffile):
 	print("Error: ELF file \""+elffile+"\" doesn't exist.")
 	sys.exit(1)
 
+if mode_32bit==True:
+	elf = Elf32(elffile)
+else:
+	elf = Elf64(elffile)
 
-elf = Elf(elffile)
 elf.parse()
 
 if (ACTION_FLAGS & FLAG_SHOW_ALL) == FLAG_SHOW_ALL:
