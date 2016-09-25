@@ -11,9 +11,10 @@ if (major != 3) or (minor < 4):
 """
 
 def usage():
-    print("Usage: "+sys.argv[0]+" --elf=<elf-file> -f <function> [--symbol=<symbol-file>] [--nm=<nm>] [--objdump=<objdump>]")
+    print("Usage: "+sys.argv[0]+" [--32bit] --elf=<elf-file> -f <function> [--symbol=<symbol-file>]")
 
 
+mode_32bit=False
 need_new_symbol_file=True
 
 nm="aarch64-linux-gnu-nm"
@@ -27,21 +28,26 @@ if len(sys.argv)<2:
     usage()
     sys.exit(1)
 
-opts, args=getopt.getopt(sys.argv[1:], "f:", ["nm=", "objdump=", "elf=", "symbol="])
+opts, args=getopt.getopt(sys.argv[1:], "f:", ["32bit", "elf=", "symbol="])
 for opt, value in opts:
-    if opt=="--nm":
-        nm=value
-    elif opt=="--objdump":
-        objdump=value
-    elif opt=="--elf":
+    if opt=="--elf":
         elffile=value
     elif opt=="--symbol":
         symfile=value
+    elif opt=="--32bit":
+        mode_32bit=True
     elif opt=="-f":
         target_symbol=value
     else:
         usage()
         sys.exit(1)
+
+if mode_32bit==True:
+    nm="arm-linux-gnueabi-nm"
+    objdump="arm-linux-gnueabi-objdump"
+else:
+    nm="aarch64-linux-gnu-nm"
+    objdump="aarch64-linux-gnu-objdump"
 
 if elffile=="":
     usage()
@@ -49,6 +55,7 @@ if elffile=="":
 if not os.path.exists(elffile):
     print("Error: ELF file \""+elffile+"\" doesn't exist.")
     sys.exit(1)
+
 if symfile=="":
     symfile=elffile+".map"
 else:
