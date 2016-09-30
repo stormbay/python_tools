@@ -301,7 +301,7 @@ class Elf32(Elf):
 	def __init__(self, file):
 		super(Elf32, self).__init__(file)
 
-		self.PAGE_OFFSET = 0xFFFFFFC000000000
+		self.PAGE_OFFSET = 0xC0000000
 
 		self.ELF_HEADER_FORMAT   = '<16sHHIIIIIHHHHHH'
 		self.ELF_HEADER_SIZE     = struct.calcsize(self.ELF_HEADER_FORMAT)
@@ -318,7 +318,7 @@ class Elf64(Elf):
 	def __init__(self, file):
 		super(Elf64, self).__init__(file)
 
-		self.PAGE_OFFSET = 0xC0000000
+		self.PAGE_OFFSET = 0xFFFFFFC000000000
 
 		self.ELF_HEADER_FORMAT   = '<16sHHIQQQIHHHHHH'
 		self.ELF_HEADER_SIZE     = struct.calcsize(self.ELF_HEADER_FORMAT)
