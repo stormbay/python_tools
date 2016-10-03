@@ -1,0 +1,13 @@
+[
+    {
+        "32-bit": false,
+        "toolchain_path": "/home/ranger/toolchain/gcc-linaro-5.3.1-2016.05-x86_64_aarch64-linux-gnu/bin",
+        "toolchain_prefix": "aarch64-linux-gnu-"
+    },
+
+    {
+        "32-bit": true,
+        "toolchain_path": "/home/ranger/toolchain/gcc-linaro-5.3.1-2016.05-x86_64_arm-linux-gnueabi/bin",
+        "toolchain_prefix": "arm-linux-gnueabi-"
+    }
+]
