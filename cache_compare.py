@@ -63,7 +63,7 @@ class CacheData(DumpData):
             result = re.search(search_string[idx], lbuf)
             if result != None:
                 if idx == 0:
-                    self.pc_start = int((lbuf[result.span()[1]:result.span()[1]+16]), 16)
+                    self.pc_start = int((lbuf[result.span()[1]:result.span()[1] + 16]), 16)
                 elif idx == 1:
                     self.lr_start = int((lbuf[result.span()[1]:result.span()[1] + 16]), 16)
                 elif idx == 2:
@@ -71,10 +71,12 @@ class CacheData(DumpData):
 
                 for i in range(16):
                     lbuf = dmsgfd.readline()
-                    linelist = lbuf.split(' ')
-                    num = len(linelist) - 4
+                    linestring = lbuf.replace("\n", "")
+                    datalist = re.findall(' ([0-9A-Fa-f]{8})', linestring)
+#                    print(datalist)
+                    num = len(datalist)
                     for j in range(num):
-                        datadump_list[idx].insert((i*num+j), int(linelist[j+4], 16))
+                        datadump_list[idx].insert((i*num+j), int(datalist[j], 16))
 
                 idx += 1
                 if idx == 3:
@@ -105,8 +107,8 @@ class MemData(DumpData):
         for i in range(3):
             start = start_address[i]
             dlist = datadump_list[i]
-            for lbuf in mdfd:
 
+            for lbuf in mdfd:
                 result = re.search("address\|", lbuf)
                 if result is not None:
                     break
@@ -116,17 +118,19 @@ class MemData(DumpData):
                     continue
 
                 if i == 0 and self.pc_start == 0:
-                    self.pc_start = int((lbuf[result.span()[1]:result.span()[1]+16]), 16)
+                    self.pc_start = int((lbuf[result.span()[1]:result.span()[1] + 16]), 16)
                 elif i == 1 and self.lr_start == 0:
                     self.lr_start = int((lbuf[result.span()[1]:result.span()[1] + 16]), 16)
                 elif i == 2 and self.sp_start == 0:
                     self.sp_start = int((lbuf[result.span()[1]:result.span()[1] + 16]), 16)
 
-                linelist = lbuf.replace("\n", "").replace(">", " ").split(' ')
-                num = len(linelist) - 4
+                linestring = lbuf.replace("\n", "").replace(">", " ")
+                datalist = re.findall(' ([0-9A-Fa-f]{8})', linestring)
+#                print(datalist)
+                num = len(datalist)
                 offset = len(dlist)
                 for j in range(num):
-                    dlist.insert((offset + j), int(linelist[j + 4], 16))
+                    dlist.insert((offset + j), int(datalist[j], 16))
 
         mdfd.close()
 
