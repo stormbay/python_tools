@@ -107,6 +107,7 @@ class MemData(DumpData):
         for i in range(3):
             start = start_address[i]
             dlist = datadump_list[i]
+            num = 0
 
             for lbuf in mdfd:
                 result = re.search("address\|", lbuf)
@@ -127,7 +128,8 @@ class MemData(DumpData):
                 linestring = lbuf.replace("\n", "").replace(">", " ")
                 datalist = re.findall(' ([0-9A-Fa-f]{8})', linestring)
 #                print(datalist)
-                num = len(datalist)
+                if num == 0:
+                    num = len(datalist)
                 offset = len(dlist)
                 for j in range(num):
                     dlist.insert((offset + j), int(datalist[j], 16))
