@@ -50,6 +50,13 @@ class CacheData(DumpData):
 
     def extract(self, file):
 
+        if mode_32bit is True:
+            datalen = 8
+            linenum = 8
+        else:
+            datalen = 16
+            linenum = 16
+
         statinfo = os.stat(file)
 
         search_string = ["PC: 0x", "LR: 0x", "SP: 0x"]
@@ -63,13 +70,13 @@ class CacheData(DumpData):
             result = re.search(search_string[idx], lbuf)
             if result != None:
                 if idx == 0:
-                    self.pc_start = int((lbuf[result.span()[1]:result.span()[1] + 16]), 16)
+                    self.pc_start = int((lbuf[result.span()[1]:result.span()[1] + datalen]), 16)
                 elif idx == 1:
-                    self.lr_start = int((lbuf[result.span()[1]:result.span()[1] + 16]), 16)
+                    self.lr_start = int((lbuf[result.span()[1]:result.span()[1] + datalen]), 16)
                 elif idx == 2:
-                    self.sp_start = int((lbuf[result.span()[1]:result.span()[1] + 16]), 16)
+                    self.sp_start = int((lbuf[result.span()[1]:result.span()[1] + datalen]), 16)
 
-                for i in range(16):
+                for i in range(linenum):
                     lbuf = dmsgfd.readline()
                     linestring = lbuf.replace("\n", "")
                     datalist = re.findall(' ([0-9A-Fa-f]{8})', linestring)
@@ -91,6 +98,11 @@ class MemData(DumpData):
         super(MemData, self).__init__()
 
     def extract(self, file):
+
+        if mode_32bit is True:
+            datalen = 8
+        else:
+            datalen = 16
 
         statinfo = os.stat(file)
 
@@ -119,11 +131,11 @@ class MemData(DumpData):
                     continue
 
                 if i == 0 and self.pc_start == 0:
-                    self.pc_start = int((lbuf[result.span()[1]:result.span()[1] + 16]), 16)
+                    self.pc_start = int((lbuf[result.span()[1]:result.span()[1] + datalen]), 16)
                 elif i == 1 and self.lr_start == 0:
-                    self.lr_start = int((lbuf[result.span()[1]:result.span()[1] + 16]), 16)
+                    self.lr_start = int((lbuf[result.span()[1]:result.span()[1] + datalen]), 16)
                 elif i == 2 and self.sp_start == 0:
-                    self.sp_start = int((lbuf[result.span()[1]:result.span()[1] + 16]), 16)
+                    self.sp_start = int((lbuf[result.span()[1]:result.span()[1] + datalen]), 16)
 
                 linestring = lbuf.replace("\n", "").replace(">", " ")
                 datalist = re.findall(' ([0-9A-Fa-f]{8})', linestring)
