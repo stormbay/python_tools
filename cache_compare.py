@@ -186,13 +186,22 @@ def verify_data(dmesg_file, dump_file):
     dump_start, dump_list = dump_data.get_sp_data()
     delta_sp, delta_sp_str = verify_section(cache_start, cache_list, dump_start, dump_list)
 
-    result_str = "\n<------ PC ------>    Total: {:d}\n".format(delta_pc)
+    if mode_32bit is True:
+        result_str = "\n<--- PC --->    Total: {:d}\n".format(delta_pc)
+    else:
+        result_str = "\n<------ PC ------>    Total: {:d}\n".format(delta_pc)
     result_str += delta_pc_str
 
-    result_str += "\n<------ LR ------>    Total: {:d}\n".format(delta_lr)
+    if mode_32bit is True:
+        result_str += "\n<--- LR --->    Total: {:d}\n".format(delta_lr)
+    else:
+        result_str += "\n<------ LR ------>    Total: {:d}\n".format(delta_lr)
     result_str += delta_lr_str
 
-    result_str += "\n<------ SP ------>    Total: {:d}\n".format(delta_sp)
+    if mode_32bit is True:
+        result_str += "\n<--- SP --->    Total: {:d}\n".format(delta_sp)
+    else:
+        result_str += "\n<------ SP ------>    Total: {:d}\n".format(delta_sp)
     result_str += delta_sp_str
 
     return result_str
