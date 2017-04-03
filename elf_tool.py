@@ -1,5 +1,5 @@
 
-import sys, os.path, getopt
+import sys, os.path
 import math, struct
 from collections import namedtuple
 
@@ -81,8 +81,8 @@ class Elf(object):
 						   3 : "INTERP",
 						   4 : "NOTE",
 						   5 : "SHLIB",
-				  		   6 : "PHDR",
-				  		   7 : "TLS",
+						   6 : "PHDR",
+						   7 : "TLS",
 				  0x60000000 : "LOOS",
 				  0x6fffffff : "HIOS",
 				  0x70000000 : "LOPROC",
@@ -331,93 +331,97 @@ class Elf64(Elf):
 		self.ElfPgHeader = namedtuple('Elf64PHeader', 'type flags offset vaddr paddr filesz memsz align')
 		self.ElfSHeader  = namedtuple('Elf64SHeader', 'name type flags addr offset size link info align entsize')
 
+if __name__ == "__main__":
 
-def usage():
-	genout="Usage: "+sys.argv[0]+" "
-	genlen=len(genout)
-	genoff=" "*genlen
-	print(genout+"-f [--32bit] --elf=<elf-file>"+"\t// show ELF file header")
-	print(genoff+"-p [--32bit] --elf=<elf-file>"+"\t// show ELF program header")
-	print(genoff+"-h [--32bit] --elf=<elf-file>"+"\t// show ELF section header")
-	print(genoff+"-x [--32bit] --elf=<elf-file>"+"\t// show all ELF headers")
-	print(genoff+"[--32bit] --elf=<elf-file> --bin=<dump-bin-file> --sid=<section-index> [--of=<output-file>]"+"\t// compare a section with memory dump")
+	import getopt
 
 
-mode_32bit=False
-
-elffile=""
-binfile=""
-outfile=""
-
-FLAG_SHOW_FH=1
-FLAG_SHOW_PH=2
-FLAG_SHOW_SH=4
-FLAG_SHOW_ALL=(FLAG_SHOW_FH | FLAG_SHOW_PH | FLAG_SHOW_SH)
-FLAG_COMPARE_FLAG=8
-
-ACTION_FLAGS=0
-
-compare_section_id=0
+	def usage():
+		genout="Usage: "+sys.argv[0]+" "
+		genlen=len(genout)
+		genoff=" "*genlen
+		print(genout+"-f [--32bit] --elf=<elf-file>"+"\t// show ELF file header")
+		print(genoff+"-p [--32bit] --elf=<elf-file>"+"\t// show ELF program header")
+		print(genoff+"-h [--32bit] --elf=<elf-file>"+"\t// show ELF section header")
+		print(genoff+"-x [--32bit] --elf=<elf-file>"+"\t// show all ELF headers")
+		print(genoff+"[--32bit] --elf=<elf-file> --bin=<dump-bin-file> --sid=<section-index> [--of=<output-file>]"+"\t// compare a section with memory dump")
 
 
-if len(sys.argv)<2:
-	usage()
-	sys.exit(1)
+	mode_32bit=False
 
-opts, args=getopt.getopt(sys.argv[1:], "fphx", ["32bit", "elf=", "bin=", "sid=", "of="])
-for opt, value in opts:
-	if opt=="-f":
-		ACTION_FLAGS |= FLAG_SHOW_FH
-	elif opt=="-p":
-		ACTION_FLAGS |= FLAG_SHOW_PH
-	elif opt=="-h":
-		ACTION_FLAGS |= FLAG_SHOW_SH
-	elif opt=="-x":
-		ACTION_FLAGS |= FLAG_SHOW_ALL
-	elif opt=="--32bit":
-		mode_32bit=True
-	elif opt=="--elf":
-		elffile=value
-	elif opt=="--bin":
-		binfile=value
-		ACTION_FLAGS |= FLAG_COMPARE_FLAG
-	elif opt=="--sid":
-		compare_section_id=int(value)
-	elif opt=="--of":
-		outfile=value
-	else:
+	elffile=""
+	binfile=""
+	outfile=""
+
+	FLAG_SHOW_FH=1
+	FLAG_SHOW_PH=2
+	FLAG_SHOW_SH=4
+	FLAG_SHOW_ALL=(FLAG_SHOW_FH | FLAG_SHOW_PH | FLAG_SHOW_SH)
+	FLAG_COMPARE_FLAG=8
+
+	ACTION_FLAGS=0
+
+	compare_section_id=0
+
+
+	if len(sys.argv)<2:
 		usage()
 		sys.exit(1)
 
-if elffile=="":
-	usage()
-	sys.exit(1)
-if not os.path.exists(elffile):
-	print("Error: ELF file \""+elffile+"\" doesn't exist.")
-	sys.exit(1)
+	opts, args=getopt.getopt(sys.argv[1:], "fphx", ["32bit", "elf=", "bin=", "sid=", "of="])
+	for opt, value in opts:
+		if opt=="-f":
+			ACTION_FLAGS |= FLAG_SHOW_FH
+		elif opt=="-p":
+			ACTION_FLAGS |= FLAG_SHOW_PH
+		elif opt=="-h":
+			ACTION_FLAGS |= FLAG_SHOW_SH
+		elif opt=="-x":
+			ACTION_FLAGS |= FLAG_SHOW_ALL
+		elif opt=="--32bit":
+			mode_32bit=True
+		elif opt=="--elf":
+			elffile=value
+		elif opt=="--bin":
+			binfile=value
+			ACTION_FLAGS |= FLAG_COMPARE_FLAG
+		elif opt=="--sid":
+			compare_section_id=int(value)
+		elif opt=="--of":
+			outfile=value
+		else:
+			usage()
+			sys.exit(1)
 
-if mode_32bit==True:
-	elf = Elf32(elffile)
-else:
-	elf = Elf64(elffile)
-
-elf.parse()
-
-if (ACTION_FLAGS & FLAG_SHOW_ALL) == FLAG_SHOW_ALL:
-	elf.show_all()
-else:
-	if (ACTION_FLAGS & FLAG_SHOW_FH) != 0:
-		elf.show_hdr()
-	if (ACTION_FLAGS & FLAG_SHOW_PH) != 0:
-		elf.show_phdr()
-	if (ACTION_FLAGS & FLAG_SHOW_SH) != 0:
-		elf.show_shdr()
-
-if (ACTION_FLAGS & FLAG_COMPARE_FLAG) != 0:
-	if not os.path.exists(binfile):
-		print("Error: Memory dump file \""+binfile+"\" doesn't exist.")
+	if elffile=="":
+		usage()
 		sys.exit(1)
-	if outfile=="":
-		outfile="diff-"+binfile+"-section-"+str(compare_section_id)
+	if not os.path.exists(elffile):
+		print("Error: ELF file \""+elffile+"\" doesn't exist.")
+		sys.exit(1)
 
-	elf.compare_section(binfile, compare_section_id, outfile)
+	if mode_32bit==True:
+		elf = Elf32(elffile)
+	else:
+		elf = Elf64(elffile)
+
+	elf.parse()
+
+	if (ACTION_FLAGS & FLAG_SHOW_ALL) == FLAG_SHOW_ALL:
+		elf.show_all()
+	else:
+		if (ACTION_FLAGS & FLAG_SHOW_FH) != 0:
+			elf.show_hdr()
+		if (ACTION_FLAGS & FLAG_SHOW_PH) != 0:
+			elf.show_phdr()
+		if (ACTION_FLAGS & FLAG_SHOW_SH) != 0:
+			elf.show_shdr()
+
+	if (ACTION_FLAGS & FLAG_COMPARE_FLAG) != 0:
+		if not os.path.exists(binfile):
+			print("Error: Memory dump file \""+binfile+"\" doesn't exist.")
+			sys.exit(1)
+		if outfile=="":
+			outfile="diff-"+binfile+"-section-"+str(compare_section_id)
+
+		elf.compare_section(binfile, compare_section_id, outfile)
