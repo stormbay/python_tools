@@ -2,6 +2,8 @@ import sys, os.path
 import getopt
 import subprocess
 
+import gen_utils
+
 """
 major, minor=sys.version_info[:2]
 if (major != 3) or (minor < 4):
@@ -16,9 +18,6 @@ def usage():
 
 mode_32bit=False
 need_new_symbol_file=True
-
-nm="aarch64-linux-gnu-nm"
-objdump="aarch64-linux-gnu-objdump"
 
 elffile=""
 symfile=""
@@ -42,9 +41,15 @@ for opt, value in opts:
         usage()
         sys.exit(1)
 
+plat = gen_utils.get_system_type()
+
 if mode_32bit==True:
-    nm="arm-linux-gnueabi-nm"
-    objdump="arm-linux-gnueabi-objdump"
+    if plat == 'Linux' :
+        nm="arm-linux-gnueabi-nm"
+        objdump="arm-linux-gnueabi-objdump"
+    elif plat == 'Windows' :
+        nm="arm-none-eabi-nm"
+        objdump="arm-none-eabi-objdump"
 else:
     nm="aarch64-linux-gnu-nm"
     objdump="aarch64-linux-gnu-objdump"

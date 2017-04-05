@@ -117,7 +117,7 @@ if __name__ == "__main__":
 		genoff=" "*genlen
 		print(genout + "-d --img=<verity-image-file>" + "\t// show FEC & Verity Info")
 
-	imgfile="/home/ranger/work/crypto/B1027_vendor.img"
+	imgfile=""
 	FLAG_SHOW_INFO = 1
 	ACTION_FLAGS = 0
 
