@@ -19,6 +19,20 @@ class VerityImage(object):
 
         self.file = file
 
+        """
+        Sync FEC header format with <system/extras/libfec/include/fec/io.h>
+
+        /* disk format for the header */
+        struct fec_header {
+            uint32_t magic;
+            uint32_t version;
+            uint32_t size;
+            uint32_t roots;
+            uint32_t fec_size;
+            uint64_t inp_size;
+            uint8_t hash[SHA256_DIGEST_LENGTH];
+        } __attribute__ ((packed));
+        """
         self.FEC_HEADER_FORMAT = 'IIIIIII32s'
         self.FEC_HEADER_SIZE = struct.calcsize(self.FEC_HEADER_FORMAT)
         self.FEC_Header = namedtuple('FECHeader', 'magic version size roots fec_size inp_size inp_high hash')
