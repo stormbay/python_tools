@@ -19,9 +19,9 @@ class VerityImage(object):
 
         self.file = file
 
-        self.FEC_HEADER_FORMAT = 'IIIIIQ32s'
+        self.FEC_HEADER_FORMAT = 'IIIIIII32s'
         self.FEC_HEADER_SIZE = struct.calcsize(self.FEC_HEADER_FORMAT)
-        self.FEC_Header = namedtuple('FECHeader', 'magic version size roots fec_size inp_size hash')
+        self.FEC_Header = namedtuple('FECHeader', 'magic version size roots fec_size inp_size inp_high hash')
 
         self.METADATA_HEADER_FORMAT = 'II256sI'
         self.METADATA_HEADER_SIZE = struct.calcsize(self.METADATA_HEADER_FORMAT)
@@ -36,15 +36,17 @@ class VerityImage(object):
         self.fd.seek(-self.FEC_BLOCK_SIZE, os.SEEK_END)
         fec_raw = self.fd.read(self.FEC_HEADER_SIZE)
         self.FecHdr1 = self.FEC_Header._make(struct.unpack(self.FEC_HEADER_FORMAT, fec_raw))
+        self.FecHdr1_inp_size = (self.FecHdr1.inp_high << 32) + self.FecHdr1.inp_size
 
         self.fd.seek(-self.FEC_HEADER_SIZE, os.SEEK_END)
         fec_raw = self.fd.read(self.FEC_HEADER_SIZE)
         self.FecHdr2 = self.FEC_Header._make(struct.unpack(self.FEC_HEADER_FORMAT, fec_raw))
+        self.FecHdr2_inp_size = (self.FecHdr2.inp_high << 32) + self.FecHdr2.inp_size
 
         """
         Parse METADATA
         """
-        self.METADATA_OFFSET = self.FecHdr1.inp_size - self.METADATA_SIZE
+        self.METADATA_OFFSET = self.FecHdr1_inp_size - self.METADATA_SIZE
 
         self.fd.seek(self.METADATA_OFFSET, os.SEEK_SET)
         metadata_raw = self.fd.read(self.METADATA_HEADER_SIZE)
@@ -120,7 +122,7 @@ class VerityImage(object):
         print("[size]:      %d" % self.FecHdr1.size)
         print("[roots]:     %d" % self.FecHdr1.roots)
         print("[fec_size]:  %d" % self.FecHdr1.fec_size)
-        print("[inp_size]:  %d" % self.FecHdr1.inp_size)
+        print("[inp_size]:  %d" % self.FecHdr1_inp_size)
         print("[hash]:      " + "%02X "*32 % struct.unpack("32B", self.FecHdr1.hash))
         print("")
 
@@ -130,7 +132,7 @@ class VerityImage(object):
         print("[size]:      %d" % self.FecHdr2.size)
         print("[roots]:     %d" % self.FecHdr2.roots)
         print("[fec_size]:  %d" % self.FecHdr2.fec_size)
-        print("[inp_size]:  %d" % self.FecHdr2.inp_size)
+        print("[inp_size]:  %d" % self.FecHdr2_inp_size)
         print("[hash]:      " + "%02X " * 32 % struct.unpack("32B", self.FecHdr2.hash))
         print("")
 
